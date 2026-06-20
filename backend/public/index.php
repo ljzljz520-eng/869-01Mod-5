@@ -125,6 +125,14 @@
             </div>
         </div>
 
+        <!-- Privacy Link -->
+        <div class="mt-12 text-center">
+            <a href="/privacy.php" class="inline-flex items-center text-sm text-slate-400 hover:text-blue-400 transition">
+                <i class="ri-shield-user-line mr-2"></i>
+                个人数据管理 - 申请删除您的数据
+            </a>
+        </div>
+
     </main>
 
     <!-- Scripts -->

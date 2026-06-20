@@ -27,27 +27,47 @@
             </div>
         </header>
 
+        <!-- 标签页导航 -->
+        <div class="bg-white border-b border-gray-200">
+            <div class="container mx-auto px-4 md:px-6">
+                <nav class="flex space-x-8">
+                    <button @click="activeTab = 'visitors'"
+                        :class="['py-4 px-1 border-b-2 font-medium text-sm transition', activeTab === 'visitors' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300']">
+                        <i class="ri-user-line mr-2"></i>访客管理
+                    </button>
+                    <button @click="activeTab = 'gdpr'"
+                        :class="['py-4 px-1 border-b-2 font-medium text-sm transition flex items-center', activeTab === 'gdpr' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300']">
+                        <i class="ri-shield-user-line mr-2"></i>数据删除请求
+                        <span v-if="pendingRequests > 0"
+                            class="ml-2 px-2 py-0.5 text-xs bg-red-500 text-white rounded-full">{{ pendingRequests }}</span>
+                    </button>
+                </nav>
+            </div>
+        </div>
+
         <!-- 主体内容 -->
         <main class="container mx-auto px-4 md:px-6 py-6 md:py-8">
 
-            <!-- 统计卡片 -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <div class="text-gray-500 text-sm mb-1">总访问量</div>
-                    <div class="text-2xl font-bold">{{ stats.total }}</div>
+            <!-- 访客管理标签页 -->
+            <div v-show="activeTab === 'visitors'">
+                <!-- 统计卡片 -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <div class="text-gray-500 text-sm mb-1">总访问量</div>
+                        <div class="text-2xl font-bold">{{ stats.total }}</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <div class="text-gray-500 text-sm mb-1">今日访问</div>
+                        <div class="text-2xl font-bold text-blue-600">{{ stats.today }}</div>
+                    </div>
                 </div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <div class="text-gray-500 text-sm mb-1">今日访问</div>
-                    <div class="text-2xl font-bold text-blue-600">{{ stats.today }}</div>
-                </div>
-            </div>
 
-            <!-- 工具栏 -->
-            <div class="flex flex-col md:flex-row justify-between items-center mb-6 space-y-4 md:space-y-0">
-                <div class="relative w-full md:w-96">
-                    <span class="absolute inset-y-0 left-0 flex items-center pl-3">
-                        <i class="ri-search-line text-gray-400"></i>
-                    </span>
+                <!-- 工具栏 -->
+                <div class="flex flex-col md:flex-row justify-between items-center mb-6 space-y-4 md:space-y-0">
+                    <div class="relative w-full md:w-96">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3">
+                            <i class="ri-search-line text-gray-400"></i>
+                        </span>
                     <input type="text" v-model="searchQuery" @keyup.enter="fetchData(1)"
                         class="w-full py-2 pl-10 pr-4 text-gray-700 bg-white border rounded-lg focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
                         placeholder="搜索 IP / 城市 / 备注...">
@@ -129,6 +149,104 @@
                     </div>
                 </div>
             </div>
+            </div>
+
+            <!-- GDPR删除请求标签页 -->
+            <div v-show="activeTab === 'gdpr'">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <div class="text-gray-500 text-sm mb-1">待处理请求</div>
+                        <div class="text-2xl font-bold text-yellow-600">{{ gdprStats.pending }}</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <div class="text-gray-500 text-sm mb-1">已完成</div>
+                        <div class="text-2xl font-bold text-green-600">{{ gdprStats.completed }}</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <div class="text-gray-500 text-sm mb-1">已拒绝</div>
+                        <div class="text-2xl font-bold text-red-600">{{ gdprStats.rejected }}</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <div class="text-gray-500 text-sm mb-1">总请求数</div>
+                        <div class="text-2xl font-bold text-blue-600">{{ gdprStats.total }}</div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col md:flex-row justify-between items-center mb-6 space-y-4 md:space-y-0">
+                    <div class="flex space-x-2">
+                        <button v-for="filter in gdprFilters" :key="filter.value" @click="gdprFilter = filter.value; fetchGdprRequests(1)"
+                            :class="['px-4 py-2 rounded-lg text-sm font-medium transition', gdprFilter === filter.value ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200']">
+                            {{ filter.label }}
+                        </button>
+                    </div>
+                    <button @click="fetchGdprRequests(1)"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                        <i class="ri-refresh-line mr-1"></i> 刷新
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-gray-50 text-gray-600 text-sm tracking-wider whitespace-nowrap">
+                                    <th class="px-6 py-4 font-semibold">申请编号</th>
+                                    <th class="px-6 py-4 font-semibold">申请人</th>
+                                    <th class="px-6 py-4 font-semibold">申请类型</th>
+                                    <th class="px-6 py-4 font-semibold">状态</th>
+                                    <th class="px-6 py-4 font-semibold">提交时间</th>
+                                    <th class="px-6 py-4 font-semibold text-right">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 bg-white">
+                                <tr v-for="req in gdprRequests" :key="req.id"
+                                    class="hover:bg-gray-50 transition whitespace-nowrap">
+                                    <td class="px-6 py-4 font-mono text-sm text-blue-600">{{ req.request_code }}</td>
+                                    <td class="px-6 py-4">
+                                        <div class="text-sm font-medium">{{ req.email || '访客#' + req.visitor_id }}</div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <span :class="['px-2 py-1 rounded-full text-xs font-medium', req.request_type === 'delete' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700']">
+                                            {{ req.request_type === 'delete' ? '删除' : '匿名化' }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <span :class="['px-2 py-1 rounded-full text-xs font-medium', 
+                                            req.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                            req.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                            'bg-red-100 text-red-700']">
+                                            {{ req.status === 'pending' ? '待处理' : req.status === 'completed' ? '已完成' : '已拒绝' }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-500">{{ req.submitted_at }}</td>
+                                    <td class="px-6 py-4 text-right space-x-2">
+                                        <button @click="openGdprDetail(req)"
+                                            class="text-blue-600 hover:text-blue-800 text-sm">查看</button>
+                                        <button v-if="req.status === 'pending'" @click="openGdprReview(req)"
+                                            class="text-green-600 hover:text-green-800 text-sm">审核</button>
+                                    </td>
+                                </tr>
+                                <tr v-if="gdprRequests.length === 0">
+                                    <td colspan="6" class="px-6 py-12 text-center text-gray-400">
+                                        暂无数据
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
+                        <div class="text-sm text-gray-500">
+                            共 {{ gdprTotal }} 条记录，第 {{ gdprPage }} / {{ gdprTotalPages }} 页
+                        </div>
+                        <div class="flex space-x-2">
+                            <button @click="prevGdprPage" :disabled="gdprPage <= 1"
+                                class="px-3 py-1 bg-white border rounded hover:bg-gray-100 disabled:opacity-50">上一页</button>
+                            <button @click="nextGdprPage" :disabled="gdprPage >= gdprTotalPages"
+                                class="px-3 py-1 bg-white border rounded hover:bg-gray-100 disabled:opacity-50">下一页</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
         </main>
 
@@ -188,6 +306,211 @@
             </div>
         </div>
 
+        <!-- GDPR详情弹窗 -->
+        <div v-if="showGdprDetailModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            @click.self="showGdprDetailModal = false">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+                <div class="px-6 py-4 border-b flex justify-between items-center bg-gray-50 flex-shrink-0">
+                    <h3 class="text-lg font-bold">删除请求详情 - {{ currentGdprRequest?.request_code }}</h3>
+                    <button @click="showGdprDetailModal = false" class="text-gray-400 hover:text-gray-600">
+                        <i class="ri-close-line text-xl"></i>
+                    </button>
+                </div>
+                <div class="flex-1 overflow-y-auto">
+                    <div class="p-6 space-y-6" v-if="gdprDetailData">
+                        <div class="bg-gray-50 rounded-xl p-4">
+                            <h4 class="font-medium mb-3 flex items-center">
+                                <i class="ri-information-line text-blue-500 mr-2"></i>申请信息
+                            </h4>
+                            <div class="grid grid-cols-2 gap-4 text-sm">
+                                <div><span class="text-gray-500">申请编号：</span>{{ gdprDetailData.request.request_code }}</div>
+                                <div><span class="text-gray-500">申请类型：</span>{{ gdprDetailData.request.request_type === 'delete' ? '删除' : '匿名化' }}</div>
+                                <div><span class="text-gray-500">申请邮箱：</span>{{ gdprDetailData.request.email || '-' }}</div>
+                                <div><span class="text-gray-500">访客编号：</span>{{ gdprDetailData.request.visitor_id || '-' }}</div>
+                                <div><span class="text-gray-500">提交时间：</span>{{ gdprDetailData.request.submitted_at }}</div>
+                                <div>
+                                    <span class="text-gray-500">状态：</span>
+                                    <span :class="['px-2 py-0.5 rounded-full text-xs font-medium', 
+                                        gdprDetailData.request.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                        gdprDetailData.request.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                        'bg-red-100 text-red-700']">
+                                        {{ gdprDetailData.request.status === 'pending' ? '待处理' : gdprDetailData.request.status === 'completed' ? '已完成' : '已拒绝' }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-if="gdprDetailData.related_data.visitors.length > 0" class="bg-blue-50 rounded-xl p-4">
+                            <h4 class="font-medium mb-3 flex items-center">
+                                <i class="ri-eye-line text-blue-500 mr-2"></i>
+                                关联浏览记录 ({{ gdprDetailData.related_data.visitors.length }} 条)
+                            </h4>
+                            <div class="space-y-2 max-h-48 overflow-y-auto">
+                                <div v-for="v in gdprDetailData.related_data.visitors" :key="v.id"
+                                    class="bg-white rounded-lg p-3 text-sm flex justify-between">
+                                    <div>
+                                        <span class="font-medium">#{{ v.id }}</span>
+                                        <span class="text-gray-500 ml-2">{{ v.city }} - {{ v.os }}/{{ v.browser }}</span>
+                                    </div>
+                                    <span class="text-gray-400">{{ v.created_at }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-if="gdprDetailData.related_data.consent_records.length > 0" class="bg-purple-50 rounded-xl p-4">
+                            <h4 class="font-medium mb-3 flex items-center">
+                                <i class="ri-shield-check-line text-purple-500 mr-2"></i>
+                                关联同意记录 ({{ gdprDetailData.related_data.consent_records.length }} 条)
+                            </h4>
+                            <div class="space-y-2 max-h-48 overflow-y-auto">
+                                <div v-for="c in gdprDetailData.related_data.consent_records" :key="c.id"
+                                    class="bg-white rounded-lg p-3 text-sm flex justify-between">
+                                    <div>
+                                        <span class="font-medium">{{ c.consent_type }}</span>
+                                        <span :class="['ml-2 px-2 py-0.5 rounded text-xs', c.consent_value === 'granted' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700']">
+                                            {{ c.consent_value === 'granted' ? '已同意' : '已拒绝' }}
+                                        </span>
+                                    </div>
+                                    <span class="text-gray-400">{{ c.created_at }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-if="gdprDetailData.related_data.export_history.length > 0" class="bg-green-50 rounded-xl p-4">
+                            <h4 class="font-medium mb-3 flex items-center">
+                                <i class="ri-download-line text-green-500 mr-2"></i>
+                                关联导出历史 ({{ gdprDetailData.related_data.export_history.length }} 条)
+                            </h4>
+                            <div class="space-y-2 max-h-48 overflow-y-auto">
+                                <div v-for="e in gdprDetailData.related_data.export_history" :key="e.id"
+                                    class="bg-white rounded-lg p-3 text-sm flex justify-between">
+                                    <div>
+                                        <span class="font-medium">{{ e.export_type }}</span>
+                                        <span class="text-gray-500 ml-2">({{ e.export_format }})</span>
+                                    </div>
+                                    <span class="text-gray-400">{{ e.created_at }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-if="gdprDetailData.related_data.remarks.length > 0" class="bg-yellow-50 rounded-xl p-4">
+                            <h4 class="font-medium mb-3 flex items-center">
+                                <i class="ri-sticky-note-line text-yellow-500 mr-2"></i>
+                                关联备注信息 ({{ gdprDetailData.related_data.remarks.length }} 条)
+                            </h4>
+                            <div class="space-y-2">
+                                <div v-for="r in gdprDetailData.related_data.remarks" :key="r.visitor_id"
+                                    class="bg-white rounded-lg p-3 text-sm">
+                                    {{ r.remark }}
+                                    <span class="text-gray-400 ml-2">{{ r.created_at }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-if="gdprDetailData.retention_info.retainable_count > 0" class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                            <h4 class="font-medium mb-3 flex items-center text-amber-800">
+                                <i class="ri-alert-line text-amber-500 mr-2"></i>
+                                依法保留数据说明
+                            </h4>
+                            <div class="text-sm text-amber-700 space-y-2">
+                                <p>系统中有 <b>{{ gdprDetailData.retention_info.retainable_count }}</b> 份汇总统计报表无法删除，原因如下：</p>
+                                <p class="bg-amber-100/50 p-3 rounded-lg">
+                                    {{ gdprDetailData.retention_info.reasons.aggregated_reports }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-6 py-4 border-t bg-gray-50 text-right flex-shrink-0">
+                    <button @click="showGdprDetailModal = false"
+                        class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">关闭</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- GDPR审核弹窗 -->
+        <div v-if="showGdprReviewModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            @click.self="showGdprReviewModal = false">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl">
+                <div class="px-6 py-4 border-b flex justify-between items-center">
+                    <h3 class="text-lg font-bold">审核删除请求 - {{ currentGdprRequest?.request_code }}</h3>
+                    <button @click="showGdprReviewModal = false" class="text-gray-400 hover:text-gray-600">
+                        <i class="ri-close-line text-xl"></i>
+                    </button>
+                </div>
+                <div class="p-6 space-y-6">
+                    <div class="bg-gray-50 rounded-xl p-4 text-sm">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><span class="text-gray-500">申请人：</span>{{ currentGdprRequest?.email || '访客#' + currentGdprRequest?.visitor_id }}</div>
+                            <div><span class="text-gray-500">申请类型：</span>{{ currentGdprRequest?.request_type === 'delete' ? '删除' : '匿名化' }}</div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-3">选择处理范围</label>
+                        <div class="space-y-3">
+                            <label class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+                                <input type="checkbox" v-model="reviewScope.visitors" class="w-4 h-4 text-blue-600 rounded">
+                                <div>
+                                    <div class="font-medium text-sm">浏览记录</div>
+                                    <div class="text-xs text-gray-500">删除或匿名化访客的浏览记录数据</div>
+                                </div>
+                            </label>
+                            <label class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+                                <input type="checkbox" v-model="reviewScope.consents" class="w-4 h-4 text-blue-600 rounded">
+                                <div>
+                                    <div class="font-medium text-sm">同意记录</div>
+                                    <div class="text-xs text-gray-500">删除用户的隐私同意记录</div>
+                                </div>
+                            </label>
+                            <label class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+                                <input type="checkbox" v-model="reviewScope.exports" class="w-4 h-4 text-blue-600 rounded">
+                                <div>
+                                    <div class="font-medium text-sm">导出历史</div>
+                                    <div class="text-xs text-gray-500">删除用户数据的导出记录</div>
+                                </div>
+                            </label>
+                            <label class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+                                <input type="checkbox" v-model="reviewScope.remarks" class="w-4 h-4 text-blue-600 rounded">
+                                <div>
+                                    <div class="font-medium text-sm">备注信息</div>
+                                    <div class="text-xs text-gray-500">清除管理员添加的备注信息</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">管理员备注</label>
+                        <textarea v-model="reviewNote" rows="3"
+                            class="w-full border rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                            placeholder="请输入处理备注，将显示在回执中"></textarea>
+                    </div>
+                </div>
+                <div class="px-6 py-4 border-t bg-gray-50 flex justify-end space-x-3">
+                    <button @click="showGdprReviewModal = false"
+                        class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">取消</button>
+                    <button @click="executeGdprAction('reject')" :disabled="isProcessing"
+                        class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50">
+                        <i v-if="isProcessing" class="ri-loader-4-line animate-spin mr-1"></i>
+                        拒绝申请
+                    </button>
+                    <button v-if="currentGdprRequest?.request_type === 'delete'" 
+                        @click="executeGdprAction('approve_delete')" :disabled="isProcessing"
+                        class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50">
+                        <i v-if="isProcessing" class="ri-loader-4-line animate-spin mr-1"></i>
+                        批准删除
+                    </button>
+                    <button v-if="currentGdprRequest?.request_type === 'anonymize'"
+                        @click="executeGdprAction('approve_anonymize')" :disabled="isProcessing"
+                        class="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 disabled:opacity-50">
+                        <i v-if="isProcessing" class="ri-loader-4-line animate-spin mr-1"></i>
+                        批准匿名化
+                    </button>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script>
@@ -207,6 +530,36 @@
                 const currentItem = ref({});
                 const remarkForm = ref({ id: null, remark: '' });
                 const currentTime = ref('');
+
+                const activeTab = ref('visitors');
+
+                const gdprRequests = ref([]);
+                const gdprTotal = ref(0);
+                const gdprPage = ref(1);
+                const gdprTotalPages = ref(1);
+                const gdprFilter = ref('');
+                const gdprStats = ref({ pending: 0, completed: 0, rejected: 0, total: 0 });
+                const pendingRequests = ref(0);
+
+                const showGdprDetailModal = ref(false);
+                const showGdprReviewModal = ref(false);
+                const currentGdprRequest = ref(null);
+                const gdprDetailData = ref(null);
+                const reviewScope = ref({
+                    visitors: true,
+                    consents: true,
+                    exports: true,
+                    remarks: true
+                });
+                const reviewNote = ref('');
+                const isProcessing = ref(false);
+
+                const gdprFilters = [
+                    { label: '全部', value: '' },
+                    { label: '待处理', value: 'pending' },
+                    { label: '已完成', value: 'completed' },
+                    { label: '已拒绝', value: 'rejected' }
+                ];
 
                 // 详情字段中文映射
                 const detailFields = [
@@ -303,6 +656,117 @@
                     }
                 };
 
+                const fetchGdprStats = async () => {
+                    try {
+                        const res = await fetch('/api.php?action=gdpr_requests&limit=1000');
+                        const json = await res.json();
+                        if (json.status === 'success') {
+                            const all = json.data;
+                            gdprStats.value = {
+                                pending: all.filter(r => r.status === 'pending').length,
+                                completed: all.filter(r => r.status === 'completed').length,
+                                rejected: all.filter(r => r.status === 'rejected').length,
+                                total: all.length
+                            };
+                            pendingRequests.value = gdprStats.value.pending;
+                        }
+                    } catch (e) {
+                        console.error(e);
+                    }
+                };
+
+                const fetchGdprRequests = async (p = 1) => {
+                    try {
+                        const statusParam = gdprFilter.value ? `&status=${gdprFilter.value}` : '';
+                        const res = await fetch(`/api.php?action=gdpr_requests&page=${p}${statusParam}`);
+                        const json = await res.json();
+                        if (json.status === 'success') {
+                            gdprRequests.value = json.data;
+                            gdprTotal.value = json.total;
+                            gdprPage.value = json.page;
+                            gdprTotalPages.value = json.pages;
+                        }
+                    } catch (e) {
+                        console.error(e);
+                    }
+                    fetchGdprStats();
+                };
+
+                const prevGdprPage = () => {
+                    if (gdprPage.value > 1) fetchGdprRequests(gdprPage.value - 1);
+                };
+
+                const nextGdprPage = () => {
+                    if (gdprPage.value < gdprTotalPages.value) fetchGdprRequests(gdprPage.value + 1);
+                };
+
+                const openGdprDetail = async (req) => {
+                    currentGdprRequest.value = req;
+                    try {
+                        const res = await fetch(`/api.php?action=gdpr_request_detail&id=${req.id}`);
+                        const json = await res.json();
+                        if (json.status === 'success') {
+                            gdprDetailData.value = json;
+                            showGdprDetailModal.value = true;
+                        }
+                    } catch (e) {
+                        alert('获取详情失败：' + e.message);
+                    }
+                };
+
+                const openGdprReview = (req) => {
+                    currentGdprRequest.value = req;
+                    reviewScope.value = { visitors: true, consents: true, exports: true, remarks: true };
+                    reviewNote.value = '';
+                    showGdprReviewModal.value = true;
+                };
+
+                const executeGdprAction = async (action) => {
+                    if (action !== 'reject') {
+                        const hasSelection = Object.values(reviewScope.value).some(v => v);
+                        if (!hasSelection) {
+                            alert('请至少选择一个处理范围');
+                            return;
+                        }
+                    }
+
+                    if (action === 'approve_delete' && !confirm('确认要删除这些数据吗？此操作不可撤销。')) {
+                        return;
+                    }
+                    if (action === 'approve_anonymize' && !confirm('确认要匿名化这些数据吗？')) {
+                        return;
+                    }
+                    if (action === 'reject' && !confirm('确认要拒绝此申请吗？')) {
+                        return;
+                    }
+
+                    isProcessing.value = true;
+                    try {
+                        const res = await fetch('/api.php?action=gdpr_execute', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                request_id: currentGdprRequest.value.id,
+                                action: action,
+                                admin_note: reviewNote.value,
+                                scope: reviewScope.value
+                            })
+                        });
+                        const json = await res.json();
+                        if (json.status === 'success') {
+                            alert('处理成功！\n已删除：' + json.deleted_count + ' 条\n已匿名化：' + json.anonymized_count + ' 条\n依法保留：' + json.retained_count + ' 条\n\n回执编号：' + json.receipt_code);
+                            showGdprReviewModal.value = false;
+                            fetchGdprRequests(gdprPage.value);
+                        } else {
+                            alert('处理失败：' + json.message);
+                        }
+                    } catch (e) {
+                        alert('处理出错：' + e.message);
+                    } finally {
+                        isProcessing.value = false;
+                    }
+                };
+
                 const getDeviceIcon = (item) => {
                     const os = (item.os || '').toLowerCase();
                     if (os.includes('mac') || os.includes('windows') || os.includes('linux')) return 'ri-computer-line';
@@ -329,13 +793,21 @@
                 onMounted(() => {
                     fetchData();
                     fetchStats();
+                    fetchGdprRequests();
                 });
 
                 return {
                     visitors, total, page, totalPages, searchQuery, stats,
                     showDetailModal, showRemarkModal, currentItem, remarkForm, currentTime,
                     detailFields, formatValue,
-                    fetchData, prevPage, nextPage, openDetail, editRemark, saveRemark, getDeviceIcon
+                    fetchData, prevPage, nextPage, openDetail, editRemark, saveRemark, getDeviceIcon,
+                    activeTab,
+                    gdprRequests, gdprTotal, gdprPage, gdprTotalPages, gdprFilter, gdprStats, pendingRequests,
+                    gdprFilters,
+                    showGdprDetailModal, showGdprReviewModal, currentGdprRequest, gdprDetailData,
+                    reviewScope, reviewNote, isProcessing,
+                    fetchGdprRequests, fetchGdprStats, prevGdprPage, nextGdprPage,
+                    openGdprDetail, openGdprReview, executeGdprAction
                 };
             }
         }).mount('#app');

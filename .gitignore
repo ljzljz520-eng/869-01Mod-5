@@ -5,3 +5,4 @@
 *.log
 /data/*.sqlite
 !/data/.gitkeep
+/backend/public/data/*.sqlite
