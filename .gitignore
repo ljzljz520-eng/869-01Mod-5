@@ -6,3 +6,6 @@
 /data/*.sqlite
 !/data/.gitkeep
 /backend/public/data/*.sqlite
+/backend/public/data/*.sqlite-*
+/backend/data/*.sqlite
+/backend/data/*.sqlite-*

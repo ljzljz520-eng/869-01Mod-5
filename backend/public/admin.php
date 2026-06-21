@@ -1,3 +1,19 @@
+<?php
+require_once __DIR__ . '/auth.php';
+
+if (!Auth::check()) {
+    header('Location: login.php');
+    exit;
+}
+
+$currentAdmin = Auth::currentAdmin();
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'logout') {
+    Auth::logout();
+    header('Location: login.php');
+    exit;
+}
+?>
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -22,7 +38,19 @@
                 </div>
                 <div class="text-sm text-gray-500 flex items-center space-x-4">
                     <span>当前时间: {{ currentTime }}</span>
-                    <a href="/" target="_blank" class="text-blue-600 hover:text-blue-800 font-medium">访问前台</a>
+                    <div class="flex items-center space-x-3">
+                        <div class="flex items-center space-x-2 px-3 py-1.5 bg-blue-50 rounded-lg border border-blue-100">
+                            <i class="ri-user-shield-line text-blue-600"></i>
+                            <span class="text-blue-700 font-medium"><?php echo htmlspecialchars($currentAdmin['display_name'] ?? $currentAdmin['username']); ?></span>
+                        </div>
+                        <a href="/" target="_blank" class="text-blue-600 hover:text-blue-800 font-medium">访问前台</a>
+                        <form method="POST" class="inline">
+                            <input type="hidden" name="action" value="logout">
+                            <button type="submit" class="inline-flex items-center px-3 py-1.5 text-red-600 hover:text-white hover:bg-red-500 border border-red-200 hover:border-red-500 rounded-lg font-medium transition">
+                                <i class="ri-logout-box-r-line mr-1"></i>退出登录
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </header>

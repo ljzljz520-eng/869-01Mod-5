@@ -9,7 +9,7 @@ class Database
     {
         if (self::$pdo === null) {
             try {
-                $dbPath = __DIR__ . '/data/visitors.sqlite';
+                $dbPath = dirname(__DIR__) . '/data/visitors.sqlite';
                 $dir = dirname($dbPath);
                 if (!is_dir($dir)) {
                     mkdir($dir, 0777, true);
@@ -145,10 +145,38 @@ class Database
         )";
         self::$pdo->exec($sql);
 
+        $sql = "CREATE TABLE IF NOT EXISTS admin_users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            display_name TEXT,
+            last_login_at DATETIME,
+            last_login_ip TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )";
+        self::$pdo->exec($sql);
+
+        $sql = "CREATE TABLE IF NOT EXISTS admin_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT UNIQUE NOT NULL,
+            admin_id INTEGER NOT NULL,
+            ip_address TEXT,
+            user_agent TEXT,
+            expires_at DATETIME NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )";
+        self::$pdo->exec($sql);
+
         // 检查是否需要插入演示数据
         $count = self::$pdo->query("SELECT COUNT(*) FROM visitors")->fetchColumn();
         if ($count == 0) {
             self::seedData();
+        }
+
+        // 检查是否需要创建默认管理员账户
+        $adminCount = self::$pdo->query("SELECT COUNT(*) FROM admin_users")->fetchColumn();
+        if ($adminCount == 0) {
+            self::seedAdmin();
         }
     }
 
@@ -291,6 +319,24 @@ class Database
             ':total_visitors' => 203,
             ':total_browsers' => '{"Chrome": 125, "Safari": 45, "Firefox": 22, "Edge": 11}',
             ':total_countries' => '{"China": 185, "United States": 10, "Japan": 5, "Others": 3}'
+        ]);
+    }
+
+    private static function seedAdmin()
+    {
+        $defaultUsername = 'admin';
+        $defaultPassword = 'admin123';
+        $passwordHash = password_hash($defaultPassword, PASSWORD_DEFAULT);
+
+        $stmt = self::$pdo->prepare("INSERT INTO admin_users (
+            username, password_hash, display_name
+        ) VALUES (
+            :username, :password_hash, :display_name
+        )");
+        $stmt->execute([
+            ':username' => $defaultUsername,
+            ':password_hash' => $passwordHash,
+            ':display_name' => '系统管理员'
         ]);
     }
 }

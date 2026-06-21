@@ -1,6 +1,6 @@
 <?php
-// backend/public/api.php
 require_once 'db.php';
+require_once 'auth.php';
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
@@ -123,6 +123,8 @@ try {
             break;
 
         case 'list':
+            Auth::requireLogin();
+
             $page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
             $limit = 20;
             $offset = ($page - 1) * $limit;
@@ -154,6 +156,8 @@ try {
             break;
 
         case 'remark':
+            Auth::requireLogin();
+
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                 throw new Exception('Invalid method');
             }
@@ -171,6 +175,8 @@ try {
             break;
 
         case 'stats':
+            Auth::requireLogin();
+
             $today = date('Y-m-d');
             $todayStmt = $pdo->prepare("SELECT COUNT(*) FROM visitors WHERE DATE(created_at) = :today AND is_deleted = 0");
             $todayStmt->execute([':today' => $today]);
@@ -341,6 +347,8 @@ try {
             break;
 
         case 'gdpr_requests':
+            Auth::requireLogin();
+
             $page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
             $limit = 20;
             $offset = ($page - 1) * $limit;
@@ -372,6 +380,8 @@ try {
             break;
 
         case 'gdpr_request_detail':
+            Auth::requireLogin();
+
             $requestId = (int) ($_GET['id'] ?? 0);
             if (!$requestId) {
                 throw new Exception('请求ID不能为空');
@@ -471,6 +481,8 @@ try {
             break;
 
         case 'gdpr_execute':
+            Auth::requireLogin();
+
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                 throw new Exception('Invalid method');
             }
